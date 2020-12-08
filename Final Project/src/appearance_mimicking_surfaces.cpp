@@ -41,6 +41,10 @@ void appearance_mimicking_surfaces(
         const Eigen::VectorXd &mu,
         Eigen::MatrixXd &DV) {
 
+	int num_vertices = V.rows();
+	DV.resize(num_vertices, 3);
+
+	DV = V;
 }
 
 //  if you are feeling fancy, this is how they implemented the depth constraints
