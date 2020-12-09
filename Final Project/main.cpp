@@ -25,10 +25,23 @@ int main(int argc, char *argv[])
 	Eigen::Vector3d view;
 	view << 0, 0, 0;
 
-	Eigen::MatrixXd lambdaMin, lambdaMax;
+	// Set the lambda_min, lambda_max constant inequality constraints so
+	// that each vertex is constrained between lambda_min and lambda_max.
+	int num_constraints = num_vertices;
+	Eigen::MatrixXd lambda_min(num_constraints, 2);
+	Eigen::MatrixXd lambda_max(num_constraints, 2);
+	for (int i = 0; i < num_vertices; i++) {
+		lambda_min(i, 0) = i;
+		lambda_min(i, 1) = 1.0;
+		lambda_max(i, 0) = i;
+		lambda_max(i, 1) = 1.2;
+	}
 
+	// Constrain the first vertex.
 	int num_fixed_vertices = 1;
 	Eigen::VectorXi bf(num_fixed_vertices);
+	bf(0) = 0;
+
 	Eigen::VectorXd weights(num_vertices);
 	Eigen::VectorXd mu(num_vertices);
 	for (int i = 0; i < num_vertices; i++) {
@@ -36,17 +49,13 @@ int main(int argc, char *argv[])
 		mu(i) = 1;
 	}
 
-	appearance_mimicking_surfaces(V, F, view, lambdaMin, lambdaMax, bf, weights, mu, DV);
+	appearance_mimicking_surfaces(V, F, view, lambda_min, lambda_max, bf, weights, mu, DV);
 
 	igl::opengl::glfw::Viewer viewer;
 
 	std::cout << R"(
 b,B 	Toggle bas-relief of the input mesh.
 )";
-	const auto update = [&]()
-	{
-
-	};
 	viewer.callback_key_pressed =
 		[&](igl::opengl::glfw::Viewer &, unsigned int key, int mod)
 	{
@@ -59,17 +68,16 @@ b,B 	Toggle bas-relief of the input mesh.
 				} else {
 					viewer.data().set_vertices(DV);
 				}
+				showing_deformed = !showing_deformed;
 				break;
 			default:
 				return false;
 		}
-		update();
 		return true;
 	};
 
 	viewer.data().set_mesh(V, F);
 
-	update();
 	// viewer.data().show_lines = false;
 	// viewer.data().show_overlay = false;
 	// viewer.data().face_based = false;
