@@ -67,9 +67,16 @@ void appearance_mimicking_surfaces(
     w_matrix.diagonal() = weights;
     igl::repdiag((Eigen::SparseMatrix<double>)w_matrix,3,D_w);
 
-	// D_V = Diagonal matrix containing row-wise stacked elements of V.
-	Eigen::DiagonalMatrix<double,Eigen::Dynamic> D_V;
-    D_V.diagonal() = Eigen::Map<const Eigen::VectorXd,Eigen::RowMajor>(V.data(),V.size());
+	// D_V_tilde = Diagonal matrix containing row-wise stacked elements of V.
+	Eigen::DiagonalMatrix<double,Eigen::Dynamic> D_V_tilde;
+    Eigen::MatrixXd V_tilde(V.rows(),3);
+
+    V_tilde = V.rowwise() - view.transpose();
+    D_V_tilde.diagonal() = Eigen::Map<const Eigen::VectorXd,Eigen::RowMajor>(V_tilde.data(),V_tilde.size());
+
+    //Lambda_0 is the per vertex lambda value (||v||) of the undeformed mesh
+    Eigen::VectorXd Lambda_0(num_vertices);
+    Lambda_0 = V_tilde.rowwise().norm();
 
 	// Cotangent Laplace-Beltrami operator.
 	Eigen::SparseMatrix<double> L(num_vertices, num_vertices);
@@ -102,19 +109,11 @@ void appearance_mimicking_surfaces(
 	}
 	S.setFromTriplets(S_triplets.begin(), S_triplets.end());
 
-	 
-    //Lambda_0 is the per vertex lambda value (||v||) of the undeformed mesh
-    Eigen::VectorXd Lambda_0(num_vertices);
-    for (int i = 0; i < num_vertices; i++)
-    {
-        Lambda_0[i] = V.row(i).norm();
-    }
-
     //intermediate step to make compiler happy
     Eigen::VectorXd S_Lambda_0,L_theta;
     S_Lambda_0 = S * Lambda_0;
     
-    L_theta = S_Lambda_0.asDiagonal().inverse() * L_0_tilde * D_V * S_Lambda_0;
+    L_theta = S_Lambda_0.asDiagonal().inverse() * L_0_tilde * D_V_tilde * S_Lambda_0;
 
 
     //D_L_theta : 3n x 3n sparsematrix
