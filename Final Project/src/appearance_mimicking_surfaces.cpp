@@ -30,6 +30,7 @@
 #include <igl/cotmatrix.h>
 #include <igl/repdiag.h>
 #include <igl/min_quad_with_fixed.h>
+#include <igl/active_set.h>
 #include <iostream>
 
 /*
@@ -47,6 +48,7 @@ void appearance_mimicking_surfaces(
         Eigen::MatrixXd &DV) {
 
 	int num_vertices = V.rows();
+	int mu_len = mu.size();
 	DV.resize(num_vertices, 3);
 
 	// TODO:  We need to the "Voronoi area" of each vertex.  Do we call igl::massmatrix() or igl::point_areas()?
@@ -56,7 +58,7 @@ void appearance_mimicking_surfaces(
 	Eigen::SparseMatrix<double> M;
 	igl::massmatrix(V, F, igl::MASSMATRIX_TYPE_VORONOI, M);
     M = M.cwiseSqrt();
-    
+
 	// D_A(i, j) = sqrt(A_i^0) if i = j else 0.
 	Eigen::SparseMatrix<double> D_A(3 * num_vertices, 3 * num_vertices);
     igl::repdiag(M,3,D_A);
@@ -112,19 +114,26 @@ void appearance_mimicking_surfaces(
     //intermediate step to make compiler happy
     Eigen::VectorXd S_Lambda_0,L_theta;
     S_Lambda_0 = S * Lambda_0;
-    
+
     L_theta = S_Lambda_0.asDiagonal().inverse() * L_0_tilde * D_V_tilde * S_Lambda_0;
 
 
     //D_L_theta : 3n x 3n sparsematrix
     Eigen::DiagonalMatrix<double,Eigen::Dynamic> D_L_theta;
     D_L_theta.diagonal() = L_theta;
-    
-    // igl::min_quad_with_fixed()
-    // TODO:  See page 6 of the paper, in the optimization section.
-	// Build L_theta, then figure out how to use Mosek to find an
-	// optimal solution.  Then apply the optimal solution to the mesh.
-   
+
+    Eigen::MatrixXd F_top_left = D_A * D_w * (L_0_tilde * D_V_tilde - (Eigen::SparseMatrix<double>) D_L_theta) * S;
+    std::cout << F_top_left.rows() << ", " << F_top_left.cols() << std::endl;
+    Eigen::MatrixXd F(3 * num_vertices + mu_len, num_vertices + mu_len);
+    Eigen::VectorXd f = Eigen::VectorXd::Zero(n);
+
+    // TODO:  Find an optimal solution for lambda.
+	Eigen::VectorXd lambda(num_vertices);
+
+	// Set the vertices of the bas-relief shape.
+	for (int i = 0; i < num_vertices; i++) {
+		DV.row(i) = lambda(i) * v_hat.row(i);
+	}
 }
 
 //  if you are feeling fancy, this is how they implemented the depth constraints
