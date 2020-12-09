@@ -47,8 +47,10 @@ void appearance_mimicking_surfaces(
         const Eigen::VectorXd &mu,
         Eigen::MatrixXd &DV) {
 
+    //TODO: use the alpha according to the paper
+    double ALPHA = 1;
 	int num_vertices = V.rows();
-	int mu_len = mu.size();
+	int mu_len = mu.maxCoeff();
 	DV.resize(num_vertices, 3);
 
 	// TODO:  We need to the "Voronoi area" of each vertex.  Do we call igl::massmatrix() or igl::point_areas()?
@@ -122,18 +124,74 @@ void appearance_mimicking_surfaces(
     Eigen::DiagonalMatrix<double,Eigen::Dynamic> D_L_theta;
     D_L_theta.diagonal() = L_theta;
 
-    Eigen::MatrixXd F_top_left = D_A * D_w * (L_0_tilde * D_V_tilde - (Eigen::SparseMatrix<double>) D_L_theta) * S;
-    std::cout << F_top_left.rows() << ", " << F_top_left.cols() << std::endl;
-    Eigen::MatrixXd F(3 * num_vertices + mu_len, num_vertices + mu_len);
-    Eigen::VectorXd f = Eigen::VectorXd::Zero(n);
+    //size 3N X N
+    Eigen::SparseMatrix<double> F_top_left = D_A * D_w * (L_0_tilde * D_V_tilde - (Eigen::SparseMatrix<double>) D_L_theta) * S;
 
-    // TODO:  Find an optimal solution for lambda.
+    //the combined matrix F (name is used so I'm using A here)
+	Eigen::SparseMatrix<double> A(3 * num_vertices + mu_len,num_vertices + mu_len);
+    std::vector<Eigen::Triplet<double>>A_triplets;
+	A_triplets.reserve(F.nonZeros() + mu_len);
+    //setting the top left corner
+    for (int k=0; k<F_top_left.outerSize(); ++k){
+        for (Eigen::SparseMatrix<double>::InnerIterator it(F_top_left,k); it; ++it){
+            A_triplets.push_back(Eigen::Triplet<double>(it.row(), it.col(), it.value()));
+        }
+    }
+
+    //setting the bottom right corner
+    for (int i = 0; i < mu_len; i++)
+    {
+        A_triplets.push_back(Eigen::Triplet<double>(3 * num_vertices + i, num_vertices + i,sqrt(ALPHA) * mu[i]));
+    }
+    
+    A.setFromTriplets(A_triplets.begin(),A_triplets.end());
+    
+    // std::cout << F_top_left.nonZeros() << std::endl;
+    // std::cout << A.nonZeros() << '\n';
+
+    //size n + mu_len X n + mu_len
+    Eigen::SparseMatrix<double> A2 = A.transpose() * A;
+
+    // std::cout << A2.nonZeros() << '\n';
+
+    Eigen::VectorXd f = Eigen::VectorXd::Zero(num_vertices + mu_len);
+
 	Eigen::VectorXd lambda(num_vertices);
+    Eigen::VectorXd x (num_vertices + mu_len);
+    x.setZero();
+
+    Eigen::VectorXd fixed_vertecies_values(bf.size());
+    for (int i = 0; i < bf.size(); i++)
+    {
+        fixed_vertecies_values[i]  =Lambda_0[bf[i]];
+    }
+    
+    //TODO: Implement these constraints, or just do the .md thing if it doesn't make sense
+    // don't waste too much time on this, I will be up around 1pm
+    //   Aieq  mieq by n list of linear inequality constraint coefficients
+    //   Bieq  mieq by 1 list of linear inequality constraint constant values
+    //Aieq*Z <= Bieq (Z is x in this case)
+    Eigen::SparseMatrix<double> Aieq;
+    Eigen::VectorXd Bieq;
+
+    igl::active_set(A2,f,
+    bf,
+    fixed_vertecies_values,
+    Eigen::SparseMatrix<double>(),
+    Eigen::VectorXd(),
+    Aieq,Bieq,
+    Eigen::VectorXd(),Eigen::VectorXd(),igl::active_set_params(),
+    x);
+
+    
+
+
 
 	// Set the vertices of the bas-relief shape.
 	for (int i = 0; i < num_vertices; i++) {
-		DV.row(i) = lambda(i) * v_hat.row(i);
+		DV.row(i) = x(i) * V_tilde.row(i);
 	}
+
 }
 
 //  if you are feeling fancy, this is how they implemented the depth constraints
