@@ -21,10 +21,6 @@ int main(int argc, char *argv[])
 	// Deformed model vertices.
 	Eigen::MatrixXd DV;
 
-	// Set the viewpoint to the origin.
-	Eigen::Vector3d view;
-	view << 0, 0, 0;
-
 	// Set the lambda_min, lambda_max constant inequality constraints so
 	// that each vertex is constrained between lambda_min and lambda_max.
 	int num_constraints = num_vertices;
@@ -49,9 +45,20 @@ int main(int argc, char *argv[])
 		mu(i) = 1;
 	}
 
-	appearance_mimicking_surfaces(V, F, view, lambda_min, lambda_max, bf, weights, mu, DV);
-
 	igl::opengl::glfw::Viewer viewer;
+
+	// From https://github.com/libigl/libigl/issues/1201.
+	auto &core = viewer.core();
+	Eigen::Vector3f camera_pos;
+	camera_pos << core.camera_eye;
+	std::cout << "Camera position:  " << camera_pos << std::endl;
+
+	// Set the viewpoint based on the camera's location.
+	Eigen::Vector3d view;
+	view = (Eigen::Vector3d) camera_pos;
+	// view << (double) camera_pos[0], (double) camera_pos[1], (double) camera_pos[2];
+
+	appearance_mimicking_surfaces(V, F, view, lambda_min, lambda_max, bf, weights, mu, DV);
 
 	std::cout << R"(
 b,B 	Toggle bas-relief of the input mesh.
