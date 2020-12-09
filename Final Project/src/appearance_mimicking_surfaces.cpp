@@ -29,6 +29,7 @@
 #include <igl/massmatrix.h>
 #include <igl/cotmatrix.h>
 #include <igl/repdiag.h>
+#include <igl/min_quad_with_fixed.h>
 #include <iostream>
 
 /*
@@ -54,31 +55,21 @@ void appearance_mimicking_surfaces(
 
 	Eigen::SparseMatrix<double> M;
 	igl::massmatrix(V, F, igl::MASSMATRIX_TYPE_VORONOI, M);
-	Eigen::VectorXd M_sqrt_diag = M.diagonal().cwiseSqrt();
-
+    M = M.cwiseSqrt();
+    
 	// D_A(i, j) = sqrt(A_i^0) if i = j else 0.
 	Eigen::SparseMatrix<double> D_A(3 * num_vertices, 3 * num_vertices);
+    igl::repdiag(M,3,D_A);
 
 	// D_w(i, j) = w_i if i = j else 0.
 	Eigen::SparseMatrix<double> D_w(3 * num_vertices, 3 * num_vertices);
+    Eigen::DiagonalMatrix<double,Eigen::Dynamic> w_matrix;
+    w_matrix.diagonal() = weights;
+    igl::repdiag((Eigen::SparseMatrix<double>)w_matrix,3,D_w);
 
 	// D_V = Diagonal matrix containing row-wise stacked elements of V.
-	Eigen::SparseMatrix<double> D_V(3 * num_vertices, 3 * num_vertices);
-
-	std::vector<Eigen::Triplet<double>> M_triplets;
-	M_triplets.reserve(3 * num_vertices);
-	std::vector<Eigen::Triplet<double>> W_triplets;
-	W_triplets.reserve(3 * num_vertices);
-	std::vector<Eigen::Triplet<double>> V_triplets;
-	V_triplets.reserve(3 * num_vertices);
-	for (int diag_entry = 0; diag_entry < 3 * num_vertices; diag_entry++) {
-		M_triplets.push_back(Eigen::Triplet<double>(diag_entry, diag_entry, M_sqrt_diag(diag_entry % num_vertices)));
-		W_triplets.push_back(Eigen::Triplet<double>(diag_entry, diag_entry, weights(diag_entry % num_vertices)));
-		V_triplets.push_back(Eigen::Triplet<double>(diag_entry, diag_entry, V(diag_entry / 3, diag_entry % 3)));
-	}
-	D_A.setFromTriplets(M_triplets.begin(), M_triplets.end());
-	D_w.setFromTriplets(W_triplets.begin(), W_triplets.end());
-	D_V.setFromTriplets(V_triplets.begin(), V_triplets.end());
+	Eigen::DiagonalMatrix<double,Eigen::Dynamic> D_V;
+    D_V.diagonal() = Eigen::Map<const Eigen::VectorXd,Eigen::RowMajor>(V.data(),V.size());
 
 	// Cotangent Laplace-Beltrami operator.
 	Eigen::SparseMatrix<double> L(num_vertices, num_vertices);
@@ -101,7 +92,7 @@ void appearance_mimicking_surfaces(
 	L_0_tilde.setFromTriplets(L_triplets.begin(), L_triplets.end());
 
 	// S = selector matrix = I_n (x) [1, 1, 1]^T.
-	Eigen::SparseMatrix<int> S(3 * num_vertices, num_vertices);
+	Eigen::SparseMatrix<double> S(3 * num_vertices, num_vertices);
 	std::vector<Eigen::Triplet<int>> S_triplets;
 	S_triplets.reserve(3 * num_vertices);
 	for (int vertex = 0; vertex < num_vertices; vertex++) {
@@ -111,9 +102,30 @@ void appearance_mimicking_surfaces(
 	}
 	S.setFromTriplets(S_triplets.begin(), S_triplets.end());
 
-	// TODO:  See page 6 of the paper, in the optimization section.
+	 
+    //Lambda_0 is the per vertex lambda value (||v||) of the undeformed mesh
+    Eigen::VectorXd Lambda_0(num_vertices);
+    for (int i = 0; i < num_vertices; i++)
+    {
+        Lambda_0[i] = V.row(i).norm();
+    }
+
+    //intermediate step to make compiler happy
+    Eigen::VectorXd S_Lambda_0,L_theta;
+    S_Lambda_0 = S * Lambda_0;
+    
+    L_theta = S_Lambda_0.asDiagonal().inverse() * L_0_tilde * D_V * S_Lambda_0;
+
+
+    //D_L_theta : 3n x 3n sparsematrix
+    Eigen::DiagonalMatrix<double,Eigen::Dynamic> D_L_theta;
+    D_L_theta.diagonal() = L_theta;
+    
+    // igl::min_quad_with_fixed()
+    // TODO:  See page 6 of the paper, in the optimization section.
 	// Build L_theta, then figure out how to use Mosek to find an
 	// optimal solution.  Then apply the optimal solution to the mesh.
+   
 }
 
 //  if you are feeling fancy, this is how they implemented the depth constraints
