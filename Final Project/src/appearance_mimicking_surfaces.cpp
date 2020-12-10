@@ -111,7 +111,7 @@ void appearance_mimicking_surfaces(
 	S_triplets.reserve(3 * num_vertices);
 	for (int vertex = 0; vertex < num_vertices; vertex++) {
 		for (int i = 0; i < 3; i++) {
-			S_triplets.push_back(Eigen::Triplet<int>(3 * vertex + 1, vertex, 1));
+			S_triplets.push_back(Eigen::Triplet<int>(3 * vertex + i, vertex, 1));
 		}
 	}
 	S.setFromTriplets(S_triplets.begin(), S_triplets.end());
