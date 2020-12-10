@@ -55,8 +55,8 @@ int main(int argc, char *argv[])
 
 	// Set the viewpoint based on the camera's location.
 	Eigen::Vector3d view;
-	view = (Eigen::Vector3d) camera_pos;
-	// view << (double) camera_pos[0], (double) camera_pos[1], (double) camera_pos[2];
+	// view = (Eigen::Vector3d) camera_pos;
+	view << (double) camera_pos[0], (double) camera_pos[1], (double) camera_pos[2];
 
 	appearance_mimicking_surfaces(V, F, view, lambda_min, lambda_max, bf, weights, mu, DV);
 

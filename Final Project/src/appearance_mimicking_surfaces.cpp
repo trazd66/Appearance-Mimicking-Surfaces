@@ -185,7 +185,7 @@ void appearance_mimicking_surfaces(
         fixed_verticies_values[i]  = avg_lambda_min_max; //Lambda_0[bf[i]];
     }
 
-    
+
 
     //   Aieq  mieq by n list of linear inequality constraint coefficients
     //   Bieq  mieq by 1 list of linear inequality constraint constant values
@@ -200,28 +200,67 @@ void appearance_mimicking_surfaces(
         C_I_triplets.push_back(Eigen::Triplet<double>(i, i, 1));
     }
     // Shoot a raycast from the viewpoint in the direction of each vertex.
+    int curr_C_I_row = 0;
    	for (int i = 0; i < num_vertices; i++) {
    		std::vector<igl::Hit> hits;
    		Eigen::RowVectorXd direction = V_tilde.row(i);
 
    		if (igl::ray_mesh_intersect(view, direction, V, F, hits))
         {
-            for (igl::Hit hit : hits) {
-                int face_index = hit.id;
-                int v0 = F(face_index, 0);
-                int v1 = F(face_index, 1);
-                int v2 = F(face_index, 2);
+        	// Each raycast hit corresponds to a single row of C_I.
+            for (int hit_no = 0; hit_no < hits.size() - 1; hit_no++) {
+            	igl::Hit front_hit = hits[hit_no];
+                int front_face = front_hit.id;
 
-                // Barycentric coordinates of the hit point.
-                double v1_bary = hit.u;
-                double v2_bary = hit.v;
+                // Front face vertices.
+                int u0 = F(front_face, 0);
+                int u1 = F(front_face, 1);
+                int u2 = F(front_face, 2);
+
+                // Front face barycentric coordinates.
+                double u1_bary = front_hit.u;
+                double u2_bary = front_hit.v;
+                double u0_bary = 1 - u1_bary - u2_bary;
+
+                C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, u0, u0_bary));
+                C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, u1, u1_bary));
+                C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, u2, u2_bary));
+
+                igl::Hit back_hit = hits[hit_no + 1];
+				int back_face = back_hit.id;
+
+				// Back face vertices.
+                int v0 = F(back_face, 0);
+                int v1 = F(back_face, 1);
+                int v2 = F(back_face, 2);
+
+                // Back face barycentric coordinates.
+                double v1_bary = back_hit.u;
+                double v2_bary = back_hit.v;
                 double v0_bary = 1 - v1_bary - v2_bary;
 
-                C_I_triplets.push_back(Eigen::Triplet<double>(i, i, 1));
-                C_I_triplets.push_back(Eigen::Triplet<double>(i, v0, -v0_bary));
-                C_I_triplets.push_back(Eigen::Triplet<double>(i, v1, -v1_bary));
-                C_I_triplets.push_back(Eigen::Triplet<double>(i, v2, -v2_bary));
+                C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, v0, -v0_bary));
+                C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, v1, -v1_bary));
+                C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, v2, -v2_bary));
+
+                curr_C_I_row++;
             }
+        }
+
+        for (int i = 0; i < lambdaMin.rows(); i++) {
+        	int vertex = lambdaMin(i, 0);
+        	int lambda_min_i = lambdaMin(i, 1);
+        	int lambda_max_i = lambdaMax(i, 1);
+
+        	// Constraint for lambda_i <= mu_g * lambda_i_max.
+        	C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, vertex, 1));
+           	C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, num_vertices + mu[i], -lambda_max_i));
+           	curr_C_I_row++;
+
+           	// Constraint for mu_g * lambda_i_min <= lambda_i.
+           	C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, vertex, -1));
+           	C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, num_vertices + mu[i], lambda_min_i));
+           	curr_C_I_row++;
         }
    	}
 
