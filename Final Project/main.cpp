@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 	Eigen::MatrixXd lambda_max(num_constraints, 2);
 	for (int i = 0; i < num_vertices; i++) {
 		lambda_min(i, 0) = i;
-		lambda_min(i, 1) = 1;
+		lambda_min(i, 1) = .3;
 		lambda_max(i, 0) = i;
 		lambda_max(i, 1) = 1;
 	}
@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
 	Eigen::Vector3d view;
 	// view = (Eigen::Vector3d) camera_pos;
 	view << (double) camera_pos[0], (double) camera_pos[1], (double) camera_pos[2];
-	view << 1,0,1; 
+	view << 1,0,1;
 	appearance_mimicking_surfaces(V, F, view, lambda_min, lambda_max, bf, weights, mu, DV);
 
 	std::cout << R"(
