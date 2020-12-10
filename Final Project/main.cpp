@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
 		(argc > 1 ? argv[1] : "../data/bunny.off"), V, F);
 
 	int num_vertices = V.rows();
-
+	V.rowwise() += Eigen::Vector3d::Ones().transpose();
 	// Deformed model vertices.
 	Eigen::MatrixXd DV;
 
@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 	Eigen::MatrixXd lambda_max(num_constraints, 2);
 	for (int i = 0; i < num_vertices; i++) {
 		lambda_min(i, 0) = i;
-		lambda_min(i, 1) = 1.0;
+		lambda_min(i, 1) = 1.;
 		lambda_max(i, 0) = i;
 		lambda_max(i, 1) = 1.2;
 	}
@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
 	Eigen::Vector3d view;
 	// view = (Eigen::Vector3d) camera_pos;
 	view << (double) camera_pos[0], (double) camera_pos[1], (double) camera_pos[2];
-	
+	view << 0,0,0; 
 	appearance_mimicking_surfaces(V, F, view, lambda_min, lambda_max, bf, weights, mu, DV);
 
 	std::cout << R"(

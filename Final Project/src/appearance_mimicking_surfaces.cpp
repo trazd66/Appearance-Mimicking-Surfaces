@@ -79,6 +79,11 @@ void appearance_mimicking_surfaces(
     //Lambda_0 is the per vertex lambda value (||v||) of the undeformed mesh
     Eigen::VectorXd Lambda_0(num_vertices);
     Lambda_0 = V_tilde.rowwise().norm();
+    for (int i = 0; i < num_vertices; i++)
+    {
+        V_tilde.row(i) /= Lambda_0[i];
+    }
+    
 
 	// Cotangent Laplace-Beltrami operator.
 	Eigen::SparseMatrix<double> L(num_vertices, num_vertices);
@@ -289,6 +294,8 @@ void appearance_mimicking_surfaces(
 		double mu_g_inv = (1.0 / x(num_vertices + mu[i] - 1));
 		DV.row(i) = mu_g_inv * x(i) * V_tilde.row(i);
 	}
+        DV.rowwise() += view.transpose();
+
     
 }
 

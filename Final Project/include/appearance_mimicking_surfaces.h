@@ -35,7 +35,7 @@ void appearance_mimicking_surfaces(
 		const Eigen::MatrixXd &lambdaMax,
         const Eigen::VectorXi &bf,
         const Eigen::VectorXd &weights,
-        const Eigen::VectorXd &mu,
+        const Eigen::VectorXi &mu,
         Eigen::MatrixXd &DV);
 
 //  if you are feeling fancy, this is how they implemented the depth constraints
