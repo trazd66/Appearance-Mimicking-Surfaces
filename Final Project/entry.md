@@ -11,6 +11,9 @@ Libraries used: Eigen, Libigl.
 
 We followed the matrix construction steps from the paper to construct the quadratic programming problem.  For the quadratic programming solver, we used `igl::active_set`.  The authors of the paper mentioned that it can also be turned into a conic programming problem and solved more efficiently with `Mosek`'s conic programming solver.
 
+We did not implement the Z-depth constraints due to limited time , hence this implementation is flawed and the results may contain unwanted artifacts
+
+
 ## Header
 We implemented a single file implementation of the algorithm that can be included and used easily.
 
