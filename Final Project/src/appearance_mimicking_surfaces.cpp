@@ -191,7 +191,6 @@ void appearance_mimicking_surfaces(
     //   Bieq  mieq by 1 list of linear inequality constraint constant values
     //Aieq*Z <= Bieq (Z is x in this case)
 
-    Eigen::SparseMatrix<double> C_I;
     std::vector<Eigen::Triplet<double>> C_I_triplets;
 
     //triplet construction for the minimum lambda constraints
@@ -209,6 +208,7 @@ void appearance_mimicking_surfaces(
         {
         	// Each raycast hit corresponds to a single row of C_I.
             for (int hit_no = 0; hit_no < hits.size() - 1; hit_no++) {
+
             	igl::Hit front_hit = hits[hit_no];
                 int front_face = front_hit.id;
 
@@ -264,9 +264,10 @@ void appearance_mimicking_surfaces(
         }
    	}
 
+   	Eigen::SparseMatrix<double> C_I(curr_C_I_row, num_vertices + mu_len);
    	C_I.setFromTriplets(C_I_triplets.begin(), C_I_triplets.end());
 
-   	Eigen::VectorXd d = Eigen::VectorXd::Zero(num_vertices);
+   	Eigen::VectorXd d = Eigen::VectorXd::Zero(curr_C_I_row);
 
     Eigen::SparseMatrix<double> Aeq;
     Eigen::VectorXd Beq;
