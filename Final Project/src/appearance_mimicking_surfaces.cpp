@@ -45,7 +45,7 @@ void appearance_mimicking_surfaces(
 		const Eigen::MatrixXd &lambdaMax,
         const Eigen::VectorXi &bf,
         const Eigen::VectorXd &weights,
-        const Eigen::VectorXd &mu,
+        const Eigen::VectorXi &mu,
         Eigen::MatrixXd &DV) {
 
     // In the paper, an alpha value of 10^-7 was used.
@@ -193,78 +193,75 @@ void appearance_mimicking_surfaces(
 
     std::vector<Eigen::Triplet<double>> C_I_triplets;
 
-    //triplet construction for the minimum lambda constraints
-    for (int i = 0; i < lambdaMin.rows(); i++)
-    {
-        C_I_triplets.push_back(Eigen::Triplet<double>(i, i, 1));
-    }
     // Shoot a raycast from the viewpoint in the direction of each vertex.
+
     int curr_C_I_row = 0;
-   	for (int i = 0; i < num_vertices; i++) {
-   		std::vector<igl::Hit> hits;
-   		Eigen::RowVectorXd direction = V_tilde.row(i);
+   	// for (int i = 0; i < num_vertices; i++) {
+   	// 	std::vector<igl::Hit> hits;
+   	// 	Eigen::RowVectorXd direction = V_tilde.row(i);
 
-   		if (igl::ray_mesh_intersect(view, direction, V, F, hits))
-        {
-        	// Each raycast hit corresponds to a single row of C_I.
-            for (int hit_no = 0; hit_no < hits.size() - 1; hit_no++) {
+   	// 	if (igl::ray_mesh_intersect(view, direction, V, F, hits))
+    //     {
+    //     	// Each raycast hit corresponds to a single row of C_I.
+    //         for (int hit_no = 0; hit_no < hits.size() - 1; hit_no++) {
 
-            	igl::Hit front_hit = hits[hit_no];
-                int front_face = front_hit.id;
+    //         	igl::Hit front_hit = hits[hit_no];
+    //             int front_face = front_hit.id;
 
-                // Front face vertices.
-                int u0 = F(front_face, 0);
-                int u1 = F(front_face, 1);
-                int u2 = F(front_face, 2);
+    //             // Front face vertices.
+    //             int u0 = F(front_face, 0);
+    //             int u1 = F(front_face, 1);
+    //             int u2 = F(front_face, 2);
 
-                // Front face barycentric coordinates.
-                double u1_bary = front_hit.u;
-                double u2_bary = front_hit.v;
-                double u0_bary = 1 - u1_bary - u2_bary;
+    //             // Front face barycentric coordinates.
+    //             double u1_bary = front_hit.u;
+    //             double u2_bary = front_hit.v;
+    //             double u0_bary = 1 - u1_bary - u2_bary;
 
-                C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, u0, u0_bary));
-                C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, u1, u1_bary));
-                C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, u2, u2_bary));
+    //             C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, u0, u0_bary));
+    //             C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, u1, u1_bary));
+    //             C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, u2, u2_bary));
 
-                igl::Hit back_hit = hits[hit_no + 1];
-				int back_face = back_hit.id;
+    //             igl::Hit back_hit = hits[hit_no + 1];
+	// 			int back_face = back_hit.id;
 
-				// Back face vertices.
-                int v0 = F(back_face, 0);
-                int v1 = F(back_face, 1);
-                int v2 = F(back_face, 2);
+	// 			// Back face vertices.
+    //             int v0 = F(back_face, 0);
+    //             int v1 = F(back_face, 1);
+    //             int v2 = F(back_face, 2);
 
-                // Back face barycentric coordinates.
-                double v1_bary = back_hit.u;
-                double v2_bary = back_hit.v;
-                double v0_bary = 1 - v1_bary - v2_bary;
+    //             // Back face barycentric coordinates.
+    //             double v1_bary = back_hit.u;
+    //             double v2_bary = back_hit.v;
+    //             double v0_bary = 1 - v1_bary - v2_bary;
 
-                C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, v0, -v0_bary));
-                C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, v1, -v1_bary));
-                C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, v2, -v2_bary));
+    //             C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, v0, -v0_bary));
+    //             C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, v1, -v1_bary));
+    //             C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, v2, -v2_bary));
 
-                curr_C_I_row++;
-            }
-        }
+    //             curr_C_I_row++;
+    //         }
+    //     }
+   	// }
+       
+    for (int i = 0; i < num_vertices; i++) {
+        int vertex = lambdaMin(i, 0);
+        double lambda_min_i = lambdaMin(i, 1);
+        double lambda_max_i = lambdaMax(i, 1);
 
-        for (int i = 0; i < lambdaMin.rows(); i++) {
-        	int vertex = lambdaMin(i, 0);
-        	int lambda_min_i = lambdaMin(i, 1);
-        	int lambda_max_i = lambdaMax(i, 1);
+        // Constraint for lambda_i <= mu_g * lambda_i_max.
+        C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, vertex, 1));
+        C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, num_vertices + mu[i] - 1, -lambda_max_i));
+        curr_C_I_row++;
 
-        	// Constraint for lambda_i <= mu_g * lambda_i_max.
-        	C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, vertex, 1));
-           	C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, num_vertices + mu[i], -lambda_max_i));
-           	curr_C_I_row++;
-
-           	// Constraint for mu_g * lambda_i_min <= lambda_i.
-           	C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, vertex, -1));
-           	C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, num_vertices + mu[i], lambda_min_i));
-           	curr_C_I_row++;
-        }
-   	}
+        // // Constraint for mu_g * lambda_i_min <= lambda_i.
+        C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, vertex, -1));
+        C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, num_vertices + mu[i] - 1, lambda_min_i));
+        curr_C_I_row++;
+    }
 
    	Eigen::SparseMatrix<double> C_I(curr_C_I_row, num_vertices + mu_len);
+
    	C_I.setFromTriplets(C_I_triplets.begin(), C_I_triplets.end());
 
    	Eigen::VectorXd d = Eigen::VectorXd::Zero(curr_C_I_row);
@@ -289,9 +286,10 @@ void appearance_mimicking_surfaces(
 	// Set the vertices of the bas-relief shape.
 	for (int i = 0; i < num_vertices; i++) {
 		// TODO:  Scale back the vertices by 1 / mu_g.
-		// double mu_g_inv = (1.0 / x(num_vertices + mu[i]));
-		DV.row(i) = /*mu_g_inv * */x(i) * V_tilde.row(i);
+		double mu_g_inv = (1.0 / x(num_vertices + mu[i] - 1));
+		DV.row(i) = mu_g_inv * x(i) * V_tilde.row(i);
 	}
+    
 }
 
 //  if you are feeling fancy, this is how they implemented the depth constraints
