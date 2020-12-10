@@ -185,47 +185,43 @@ void appearance_mimicking_surfaces(
         fixed_verticies_values[i]  = avg_lambda_min_max; //Lambda_0[bf[i]];
     }
 
-    //TODO: Implement these constraints, or just do the .md thing if it doesn't make sense
-    // don't waste too much time on this, I will be up around 1pm
+    
+
     //   Aieq  mieq by n list of linear inequality constraint coefficients
     //   Bieq  mieq by 1 list of linear inequality constraint constant values
     //Aieq*Z <= Bieq (Z is x in this case)
 
-    // Send a raycast out from the viewpoint to each vertex in the mesh.
-    Eigen::MatrixXd V_source(num_vertices, 3);
-    for (int i = 0; i < num_vertices; i++) {
-    	V_source.row(i) = viewpoint;
-    }
-
     Eigen::SparseMatrix<double> C_I;
     std::vector<Eigen::Triplet<double>> C_I_triplets;
-	C_I_triplets.reserve(?????);
 
+    //triplet construction for the minimum lambda constraints
+    for (int i = 0; i < lambdaMin.rows(); i++)
+    {
+        C_I_triplets.push_back(Eigen::Triplet<double>(i, i, 1));
+    }
     // Shoot a raycast from the viewpoint in the direction of each vertex.
    	for (int i = 0; i < num_vertices; i++) {
    		std::vector<igl::Hit> hits;
    		Eigen::RowVectorXd direction = V_tilde.row(i);
 
-   		if (!igl::ray_mesh_intersect(viewpoint, direction, V, F, hits))
+   		if (igl::ray_mesh_intersect(view, direction, V, F, hits))
         {
-            return false;
-        }
+            for (igl::Hit hit : hits) {
+                int face_index = hit.id;
+                int v0 = F(face_index, 0);
+                int v1 = F(face_index, 1);
+                int v2 = F(face_index, 2);
 
-        for (igl::Hit hit : hits) {
-        	int face_index = hit.id;
-        	int v0 = F(face_index, 0);
-        	int v1 = F(face_index, 1);
-        	int v2 = F(face_index, 2);
+                // Barycentric coordinates of the hit point.
+                double v1_bary = hit.u;
+                double v2_bary = hit.v;
+                double v0_bary = 1 - v1_bary - v2_bary;
 
-        	// Barycentric coordinates of the hit point.
-        	float v1_bary = hit.u;
-        	float v2_bary = hit.v;
-        	float v0_bary = 1 - v1_bary - v2_bary;
-
-        	C_I_triplets.push_back(Eigen::Triplet<double>(i, i, 1));
-        	C_I_triplets.push_back(Eigen::Triplet<double>(i, v0, -v0_bary));
-        	C_I_triplets.push_back(Eigen::Triplet<double>(i, v1, -v1_bary));
-        	C_I_triplets.push_back(Eigen::Triplet<double>(i, v2, -v2_bary));
+                C_I_triplets.push_back(Eigen::Triplet<double>(i, i, 1));
+                C_I_triplets.push_back(Eigen::Triplet<double>(i, v0, -v0_bary));
+                C_I_triplets.push_back(Eigen::Triplet<double>(i, v1, -v1_bary));
+                C_I_triplets.push_back(Eigen::Triplet<double>(i, v2, -v2_bary));
+            }
         }
    	}
 
