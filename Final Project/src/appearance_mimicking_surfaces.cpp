@@ -71,7 +71,7 @@ void appearance_mimicking_surfaces(
 
 	// D_V_tilde = Diagonal matrix containing row-wise stacked elements of V.
 	Eigen::DiagonalMatrix<double,Eigen::Dynamic> D_V_tilde;
-    Eigen::MatrixXd V_tilde(V.rows(),3);
+    Eigen::MatrixXd V_tilde(num_vertices, 3);
 
     V_tilde = V.rowwise() - view.transpose();
     D_V_tilde.diagonal() = Eigen::Map<const Eigen::VectorXd,Eigen::RowMajor>(V_tilde.data(),V_tilde.size());
@@ -83,7 +83,6 @@ void appearance_mimicking_surfaces(
     {
         V_tilde.row(i) /= Lambda_0[i];
     }
-    
 
 	// Cotangent Laplace-Beltrami operator.
 	Eigen::SparseMatrix<double> L(num_vertices, num_vertices);
@@ -98,9 +97,9 @@ void appearance_mimicking_surfaces(
 
 	for (int row = 0; row < L.outerSize(); row++) {
 		for (Eigen::SparseMatrix<double>::InnerIterator it(L, row); it; ++it) {
-			L_triplets.push_back(Eigen::Triplet<double>(3 * it.row(), 3 * it.col(), it.value()));
-			L_triplets.push_back(Eigen::Triplet<double>(3 * it.row() + 1, 3 * it.col() + 1, it.value()));
-			L_triplets.push_back(Eigen::Triplet<double>(3 * it.row() + 2, 3 * it.col() + 2, it.value()));
+			for (int k = 0; k < 3; k++) {
+				L_triplets.push_back(Eigen::Triplet<double>(3 * it.row() + k, 3 * it.col() + k, it.value()));
+			}
 		}
 	}
 	L_0_tilde.setFromTriplets(L_triplets.begin(), L_triplets.end());
@@ -111,7 +110,7 @@ void appearance_mimicking_surfaces(
 	S_triplets.reserve(3 * num_vertices);
 	for (int vertex = 0; vertex < num_vertices; vertex++) {
 		for (int i = 0; i < 3; i++) {
-			S_triplets.push_back(Eigen::Triplet<int>(3 * vertex + 1, vertex, 1));
+			S_triplets.push_back(Eigen::Triplet<int>(3 * vertex + i, vertex, 1));
 		}
 	}
 	S.setFromTriplets(S_triplets.begin(), S_triplets.end());
@@ -190,16 +189,9 @@ void appearance_mimicking_surfaces(
         fixed_verticies_values[i]  = avg_lambda_min_max; //Lambda_0[bf[i]];
     }
 
-
-
-    //   Aieq  mieq by n list of linear inequality constraint coefficients
-    //   Bieq  mieq by 1 list of linear inequality constraint constant values
-    //Aieq*Z <= Bieq (Z is x in this case)
-
     std::vector<Eigen::Triplet<double>> C_I_triplets;
 
     // Shoot a raycast from the viewpoint in the direction of each vertex.
-
     int curr_C_I_row = 0;
    	// for (int i = 0; i < num_vertices; i++) {
    	// 	std::vector<igl::Hit> hits;
@@ -228,9 +220,9 @@ void appearance_mimicking_surfaces(
     //             C_I_triplets.push_back(Eigen::Triplet<double>(curr_C_I_row, u2, u2_bary));
 
     //             igl::Hit back_hit = hits[hit_no + 1];
-	// 			int back_face = back_hit.id;
+	//			   // int back_face = back_hit.id;
 
-	// 			// Back face vertices.
+    //             // Back face vertices.
     //             int v0 = F(back_face, 0);
     //             int v1 = F(back_face, 1);
     //             int v2 = F(back_face, 2);
@@ -248,7 +240,9 @@ void appearance_mimicking_surfaces(
     //         }
     //     }
    	// }
-       
+
+   	std::cout << "1" << std::endl;
+
     for (int i = 0; i < num_vertices; i++) {
         int vertex = lambdaMin(i, 0);
         double lambda_min_i = lambdaMin(i, 1);
@@ -294,20 +288,5 @@ void appearance_mimicking_surfaces(
 		double mu_g_inv = (1.0 / x(num_vertices + mu[i] - 1));
 		DV.row(i) = mu_g_inv * x(i) * V_tilde.row(i);
 	}
-        DV.rowwise() += view.transpose();
-
-    
+   	DV.rowwise() += view.transpose();
 }
-
-//  if you are feeling fancy, this is how they implemented the depth constraints
-//    zOrder       #Constraints x 8 [order,vIdx,vAIdx,vBIdx,vCIdx,u,v,w]
-//                 Contains the depth order constraints
-//                 for vertex <-> triangle point pairs
-//                 order: 1 vertex in front of triangle; -1 behind triangle
-//                 vIdx:  index of vertex
-//                 vAIdx: index of first vertex (A) of triangle
-//                 vBIdx: index of second vertex (B) of triangle
-//                 vCIdx: index of third vertex (C) of triangle
-//                 u: barycentric coordinate of point of triangle A
-//                 v: barycentric coordinate of point of triangle B
-//                 w: barycentric coordinate of point of triangle C
