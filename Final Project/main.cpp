@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
 		(argc > 1 ? argv[1] : "../data/bunny.off"), V, F);
 
 	int num_vertices = V.rows();
-	// V.rowwise() += Eigen::Vector3d::Ones().transpose();
+
 	// Deformed model vertices.
 	Eigen::MatrixXd DV;
 
@@ -47,17 +47,10 @@ int main(int argc, char *argv[])
 
 	igl::opengl::glfw::Viewer viewer;
 
-	// From https://github.com/libigl/libigl/issues/1201.
-	auto &core = viewer.core();
-	Eigen::Vector3f camera_pos;
-	camera_pos << core.camera_eye;
-	std::cout << "Camera position:  " << camera_pos << std::endl;
-
-	// Set the viewpoint based on the camera's location.
+	// Set the viewpoint.
 	Eigen::Vector3d view;
-	// view = (Eigen::Vector3d) camera_pos;
-	view << (double) camera_pos[0], (double) camera_pos[1], (double) camera_pos[2];
-	view << 1,0,1;
+	view << 1, 0, 1;
+
 	appearance_mimicking_surfaces(V, F, view, lambda_min, lambda_max, bf, weights, mu, DV);
 
 	std::cout << R"(

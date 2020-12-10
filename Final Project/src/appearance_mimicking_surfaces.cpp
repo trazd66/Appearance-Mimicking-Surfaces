@@ -32,7 +32,6 @@
 #include <igl/min_quad_with_fixed.h>
 #include <igl/active_set.h>
 #include <igl/ray_mesh_intersect.h>
-#include <iostream>
 
 /*
  * Shoot raycasts at each vertex to build up the inequality constraints matrix C_I.
@@ -251,9 +250,10 @@ void appearance_mimicking_surfaces(
     // Shoot a raycast from the viewpoint in the direction of each vertex.
     int curr_C_I_row = 0;
 
-    // Add to the C_I matrix the depth constraints.
+    /* Note:  This function is meant to add in the depth constraints as described in the "Self-intersection avoidance" section
+     * of the paper.  However it was giving us issues, so we decided not to include it.
+     */
    	depth_constraint(num_vertices, view, V, F, curr_C_I_row, C_I_triplets);
-   	std::cout << curr_C_I_row << std::endl;
 
     for (int i = 0; i < num_vertices; i++) {
         int vertex = lambdaMin(i, 0);
