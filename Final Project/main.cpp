@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 	Eigen::MatrixXd lambda_max(num_constraints, 2);
 	for (int i = 0; i < num_vertices; i++) {
 		lambda_min(i, 0) = i;
-		lambda_min(i, 1) = .3;
+		lambda_min(i, 1) = 0.3;
 		lambda_max(i, 0) = i;
 		lambda_max(i, 1) = 1;
 	}

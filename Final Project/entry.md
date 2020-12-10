@@ -9,9 +9,11 @@ In order to accomplish this, we would like to minimize the sum of squared distan
 
 ## Implementation:
 Libraries used: Eigen, Libigl.
-We followed the matrix construction steps from the paper to construct the quadratic programming problem.
-For the quadratic programming solver, we used `igl::active_set`.
-(The authors of the paper mentioned that it can also be turned into a conic programming problem and solved perfectly with `Mosek`'s Conic solver.)
+- We followed the matrix construction steps from the paper to construct the quadratic programming problem.
+- For the quadratic programming solver, we used `igl::active_set`.
+(The authors of the paper mentioned that it can also be turned into a conic programming problem and solved more efficiently with `Mosek`'s Conic solver.)
+
+- We did not implement the Z-depth constraints due to limited time , hence this implementation is flawed and the results may contain unwanted artifacts
 
 ## Header
 We implemented a single file implementation of the algorithm that can be included and used easily.
@@ -89,8 +91,26 @@ We implemented a single file implementation of the algorithm that can be include
 
     appearance_mimicking_surfaces(V, F, view, lambda_min, lambda_max, bf, weights, mu, DV);
 
+
+## Compile and using the main file.
+1. download the most recent `libigl` library into the directory
+2. run `cmake .. -DCMAKE_BUILD_TYPE=Release` or `cmake .. -DCMAKE_BUILD_TYPE=Debug` for debug mode inside the `build` directory
+3. run `make` inside the `build` directory
+4. run `./appearance-mimicking-surfaces ` for the default bunny mesh, or add an argument to the your prefered mesh .e.g:  `./appearance-mimicking-surfaces ../data/cactus.obj`
+
+
+
 ## Sample results
 1. with `lambdaMin` and `lambdaMax` set to the same, so it should squash the bunny into a thin sheat of paper while still preserving its shape.
 
+<p align="center">
+<img src="./sample pictures/bunny0.png"/>
+<p align="center">
+<img src="./sample pictures/bunny1.png"/>
 
+2. with less extreme `lambdaMin` and `lambdaMax`
 
+<p align="center">
+<img src="./sample pictures/bunny2.png"/>
+<p align="center">
+<img src="./sample pictures/bunny3.png"/>
